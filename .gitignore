@@ -4,6 +4,8 @@
 /node_modules
 /.pnp
 .pnp.js
+/src/monitor-frontend/node_modules
+/src/monitor-frontend/build
 
 # testing
 /coverage
@@ -21,3 +23,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# .NET output
+/src/monitor-service/bin/
+/src/monitor-service/obj/
+
+# SQLite database files
+/src/monitor-service/*.db
