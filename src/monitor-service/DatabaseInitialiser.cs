@@ -2,7 +2,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,9 +32,18 @@ public class DatabaseInitialiser : IHostedService
                     Id INTEGER PRIMARY KEY,
                     Endpoint TEXT NOT NULL,
                     Response TEXT NOT NULL,
-                    IsValid BOOLEAN NOT NULL,
+                    Status INT NOT NULL,
                     Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )";
+                );
+                CREATE TABLE IF NOT EXISTS Endpoints (
+                    Id INTEGER PRIMARY KEY,
+                    FriendlyName TEXT NOT NULL,
+                    Url TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS Settings (
+                    Id INTEGER PRIMARY KEY,
+                    CheckInterval INTEGER NOT NULL
+                );";
             command.ExecuteNonQuery();
             _logger.LogInformation("Database initialized successfully.");
 
