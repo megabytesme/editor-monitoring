@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { httpRequest } from './httpService';
+import './MonitorDashboard.css';
 
 interface EndpointConfig {
     id: number;
@@ -62,18 +63,18 @@ const MonitorDashboard: React.FC = () => {
                     'Content-Type': 'application/json',
                 },
             });
-    
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-    
+
             fetchEndpoints();
             fetchStatusResults();
         } catch (error) {
             console.error('Error removing endpoint:', error);
         }
     };
-    
+
     const handleAddEndpoint = async () => {
         try {
             const response = await httpRequest<EndpointConfig>({
@@ -121,48 +122,54 @@ const MonitorDashboard: React.FC = () => {
     }, []);
 
     return (
-        <div>
+        <div className="monitor-dashboard">
             <h1>Monitoring Dashboard</h1>
 
-            {endpoints.map((endpoint) => {
-                const result = results.find(result => result.endpoint === endpoint.url);
-                return (
-                    <div key={endpoint.id} className="endpoint-box">
-                        <h3>{endpoint.friendlyName}</h3>
-                        <p>URL: {endpoint.url}</p>
-                        <p>Status: {result ? result.status : 'Unknown'}</p>
-                        <p>Response: {result ? result.response : 'Unknown'}</p>
-                        <p>Last Checked: {result ? formatTimestamp(result.timestamp) : 'Never'}</p>
-                        <button onClick={() => handleTestEndpoint(endpoint.url)}>Test Endpoint</button>
-                        <button onClick={() => handleRemoveEndpoint(endpoint.id)}>Remove</button>
-                    </div>
-                );
-            })}
+            <div className="grid-container">
+                {endpoints.map((endpoint) => {
+                    const result = results.find(result => result.endpoint === endpoint.url);
+                    return (
+                        <div key={endpoint.id} className="card endpoint-box">
+                            <h3>{endpoint.friendlyName}</h3>
+                            <p>URL: {endpoint.url}</p>
+                            <p>Status: {result ? result.status : 'Unknown'}</p>
+                            <p>Response: {result ? result.response : 'Unknown'}</p>
+                            <p>Last Checked: {result ? formatTimestamp(result.timestamp) : 'Never'}</p>
+                            <button onClick={() => handleTestEndpoint(endpoint.url)}>Test Endpoint</button>
+                            <button onClick={() => handleRemoveEndpoint(endpoint.id)}>Remove</button>
+                        </div>
+                    );
+                })}
+            </div>
 
-            <h2>Add Endpoint</h2>
-            <input
-                type="text"
-                placeholder="Friendly Name"
-                value={newEndpoint.friendlyName}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, friendlyName: e.target.value })}
-            />
-            <input
-                type="text"
-                placeholder="URL"
-                value={newEndpoint.url}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, url: e.target.value })}
-            />
-            <button onClick={handleAddEndpoint}>Add</button>
-
-            <h2>Settings</h2>
-            <label>
-                Check Interval (seconds):
+            <div className="card add-endpoint-card">
+                <h2>Add Endpoint</h2>
                 <input
-                    type="number"
-                    value={settings.checkInterval}
-                    onChange={(e) => handleCheckIntervalChange(Number(e.target.value))}
+                    type="text"
+                    placeholder="Friendly Name"
+                    value={newEndpoint.friendlyName}
+                    onChange={(e) => setNewEndpoint({ ...newEndpoint, friendlyName: e.target.value })}
                 />
-            </label>
+                <input
+                    type="text"
+                    placeholder="URL"
+                    value={newEndpoint.url}
+                    onChange={(e) => setNewEndpoint({ ...newEndpoint, url: e.target.value })}
+                />
+                <button onClick={handleAddEndpoint}>Add</button>
+            </div>
+
+            <div className="card settings-card">
+                <h2>Settings</h2>
+                <label>
+                    Check Interval (seconds):
+                    <input
+                        type="number"
+                        value={settings.checkInterval}
+                        onChange={(e) => handleCheckIntervalChange(Number(e.target.value))}
+                    />
+                </label>
+            </div>
         </div>
     );
 };
