@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { httpRequest } from './httpService';
 
 interface TestResult {
-    message: string;
+    id: number;
+    endpoint: string;
+    response: string;
+    isValid: boolean;
+    timestamp: string;
 }
 
 const MonitorDashboard: React.FC = () => {
@@ -11,22 +15,33 @@ const MonitorDashboard: React.FC = () => {
 
     const handleTestEndpoint = async () => {
         try {
-            const response = await httpRequest<TestResult[]>({
+            const response = await httpRequest<{ message: string }>({
                 method: 'POST',
                 url: 'http://localhost:5000/api/EndpointTester/test-endpoint',
                 body: { endpoint },
             });
-
-            if (Array.isArray(response)) {
-                setResults(response);
-            } else {
-                setResults([response]);
-            }
+            console.log(response.message);
+            fetchResults();
         } catch (error) {
             console.error('Error testing endpoint:', error);
-            setResults([]);
         }
     };
+
+    const fetchResults = async () => {
+        try {
+            const response = await httpRequest<TestResult[]>({
+                method: 'GET',
+                url: 'http://localhost:5000/api/EndpointTester/results',
+            });
+            setResults(response);
+        } catch (error) {
+            console.error('Error fetching results:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchResults();
+    }, []);
 
     return (
         <div>
@@ -41,8 +56,10 @@ const MonitorDashboard: React.FC = () => {
 
             <h2>Results</h2>
             <ul>
-                {results.map((result, index) => (
-                    <li key={index}>{result.message}</li>
+                {results.map((result) => (
+                    <li key={result.id}>
+                        {result.timestamp}: {result.endpoint} - {result.response} - {result.isValid ? 'Valid' : 'Invalid'}
+                    </li>
                 ))}
             </ul>
         </div>
