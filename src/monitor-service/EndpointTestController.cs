@@ -29,14 +29,12 @@ public class EndpointTesterController : ControllerBase
 
         var response = await _httpClient.GetAsync(request.Endpoint);
         var content = await response.Content.ReadAsStringAsync();
-        _logger.LogInformation("Received response: {Response}", content);
+        var statusCode = (int)response.StatusCode;
+        _logger.LogInformation("Received response with status code: {StatusCode}", statusCode);
 
-        var isValid = ValidateResponse(content);
-        _logger.LogInformation("Validation result: {IsValid}", isValid);
+        await LogResultAsync(request.Endpoint, content, statusCode);
 
-        await LogResultAsync(request.Endpoint, content, isValid);
-
-        return Ok(new { message = isValid ? "Success" : "Failure" });
+        return Ok(new { message = statusCode == 200 ? "Success" : "Failure" });
     }
 
     [HttpGet]
@@ -60,7 +58,7 @@ public class EndpointTesterController : ControllerBase
                         Id = reader.GetInt32(0),
                         Endpoint = reader.GetString(1),
                         Response = reader.GetString(2),
-                        IsValid = reader.GetBoolean(3),
+                        Status = reader.GetInt32(3),
                         Timestamp = reader.GetDateTime(4)
                     });
                 }
@@ -79,23 +77,17 @@ public class EndpointTesterController : ControllerBase
         }
     }
 
-    private bool ValidateResponse(string content)
+    private async Task LogResultAsync(string endpoint, string response, int statusCode)
     {
-        // TODO
-        return true;
-    }
-
-    private async Task LogResultAsync(string endpoint, string response, bool isValid)
-    {
-        _logger.LogInformation("Logging result to database. Endpoint: {Endpoint}, Response: {Response}, IsValid: {IsValid}", endpoint, response, isValid);
+        _logger.LogInformation("Logging result to database. Endpoint: {Endpoint}, Response: {Response}, Status: {StatusCode}", endpoint, response, statusCode);
         try
         {
             await _dbConnection.OpenAsync();
             var command = _dbConnection.CreateCommand();
-            command.CommandText = @"INSERT INTO Results (Endpoint, Response, IsValid) VALUES (@endpoint, @response, @isValid)";
+            command.CommandText = @"INSERT INTO Results (Endpoint, Response, Status) VALUES (@endpoint, @response, @statusCode)";
             command.Parameters.AddWithValue("@endpoint", endpoint);
             command.Parameters.AddWithValue("@response", response);
-            command.Parameters.AddWithValue("@isValid", isValid);
+            command.Parameters.AddWithValue("@statusCode", statusCode);
             await command.ExecuteNonQueryAsync();
             _logger.LogInformation("Result logged successfully.");
         }
@@ -121,6 +113,6 @@ public class Result
     public int Id { get; set; }
     public string Endpoint { get; set; }
     public string Response { get; set; }
-    public bool IsValid { get; set; }
+    public int Status { get; set; }
     public DateTime Timestamp { get; set; }
 }
