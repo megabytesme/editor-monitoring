@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -38,6 +39,46 @@ public class EndpointTesterController : ControllerBase
         return Ok(new { message = isValid ? "Success" : "Failure" });
     }
 
+    [HttpGet]
+    [Route("results")]
+    public async Task<IActionResult> GetResults()
+    {
+        _logger.LogInformation("Fetching results from database...");
+        try
+        {
+            await _dbConnection.OpenAsync();
+            var command = _dbConnection.CreateCommand();
+            command.CommandText = "SELECT * FROM Results";
+
+            var results = new List<Result>();
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    results.Add(new Result
+                    {
+                        Id = reader.GetInt32(0),
+                        Endpoint = reader.GetString(1),
+                        Response = reader.GetString(2),
+                        IsValid = reader.GetBoolean(3),
+                        Timestamp = reader.GetDateTime(4)
+                    });
+                }
+            }
+            _logger.LogInformation("Results fetched successfully.");
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching results from database.");
+            throw;
+        }
+        finally
+        {
+            await _dbConnection.CloseAsync();
+        }
+    }
+
     private bool ValidateResponse(string content)
     {
         // TODO
@@ -73,4 +114,13 @@ public class EndpointTesterController : ControllerBase
 public class TestRequest
 {
     public string Endpoint { get; set; }
+}
+
+public class Result
+{
+    public int Id { get; set; }
+    public string Endpoint { get; set; }
+    public string Response { get; set; }
+    public bool IsValid { get; set; }
+    public DateTime Timestamp { get; set; }
 }
