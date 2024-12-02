@@ -56,17 +56,24 @@ const MonitorDashboard: React.FC = () => {
 
     const handleRemoveEndpoint = async (id: number) => {
         try {
-            await httpRequest<void>({
+            const response = await fetch(`http://localhost:5000/api/config/endpoints/${id}`, {
                 method: 'DELETE',
-                url: `http://localhost:5000/api/config/endpoints/${id}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
-            setEndpoints(endpoints.filter((endpoint) => endpoint.id !== id));
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            fetchEndpoints();
             fetchStatusResults();
         } catch (error) {
             console.error('Error removing endpoint:', error);
         }
     };
-
+    
     const handleAddEndpoint = async () => {
         try {
             const response = await httpRequest<EndpointConfig>({
