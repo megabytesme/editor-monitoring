@@ -95,6 +95,19 @@ const MonitorDashboard: React.FC = () => {
         }
     };
 
+    const handleTestEndpoint = async (endpoint: string) => {
+        try {
+            await httpRequest<void>({
+                method: 'POST',
+                url: 'http://localhost:5000/api/EndpointTester/test-endpoint',
+                body: { endpoint },
+            });
+            fetchStatusResults();
+        } catch (error) {
+            console.error('Error testing endpoint:', error);
+        }
+    };
+
     useEffect(() => {
         fetchEndpoints();
         fetchStatusResults();
@@ -113,6 +126,7 @@ const MonitorDashboard: React.FC = () => {
                         <p>Status: {result ? result.status : 'Unknown'}</p>
                         <p>Response: {result ? result.response : 'Unknown'}</p>
                         <p>Last Checked: {result ? formatTimestamp(result.timestamp) : 'Never'}</p>
+                        <button onClick={() => handleTestEndpoint(endpoint.url)}>Test Endpoint</button>
                         <button onClick={() => handleRemoveEndpoint(endpoint.id)}>Remove</button>
                     </div>
                 );
