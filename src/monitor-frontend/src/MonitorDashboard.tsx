@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './MonitorDashboard.css';
 
 interface EndpointConfig {
     id: number;
     friendlyName: string;
     url: string;
+    lastResponseDuration?: number;
 }
 
 interface StatusResult {
@@ -13,6 +14,7 @@ interface StatusResult {
     response: string;
     status: number;
     timestamp: string;
+    duration: number;
 }
 
 interface SettingsConfig {
@@ -44,8 +46,8 @@ const MonitorDashboard: React.FC = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            setEndpoints(data);
+            const data: EndpointConfig[] = await response.json();
+            setEndpoints(data); // Store the endpoints without additional metrics here
         } catch (error) {
             console.error('Error fetching endpoints:', error);
         }
@@ -65,18 +67,7 @@ const MonitorDashboard: React.FC = () => {
             }
 
             const data: StatusResult[] = await response.json();
-            
-            const latestResultsMap = new Map<string, StatusResult>();
-
-            data.forEach(result => {
-                const current = latestResultsMap.get(result.endpoint);
-                if (!current || new Date(result.timestamp) > new Date(current.timestamp)) {
-                    latestResultsMap.set(result.endpoint, result);
-                }
-            });
-
-            const latestResults = Array.from(latestResultsMap.values());
-            setResults(latestResults);
+            setResults(data);
         } catch (error) {
             console.error('Error fetching status results:', error);
         }
@@ -164,7 +155,7 @@ const MonitorDashboard: React.FC = () => {
         } catch (error) {
             console.error('Error updating check interval:', error);
         }
-    };    
+    };
 
     const handleTestEndpoint = async (endpoint: string) => {
         try {
@@ -186,18 +177,22 @@ const MonitorDashboard: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        const fetchData = () => {
-            fetchEndpoints();
-            fetchStatusResults();
-        };
-
-        fetchSettings().then(fetchData);
-
-        const interval = setInterval(fetchData, settings.checkInterval * 1000);
-
-        return () => clearInterval(interval);
+    const fetchData = useCallback(() => {
+        fetchEndpoints();
+        fetchStatusResults();
     }, [settings.checkInterval]);
+
+    useEffect(() => {
+        fetchSettings().then(fetchData);
+        const intervalId = setInterval(fetchData, settings.checkInterval * 1000) as unknown as number;
+        intervalIdRef.current = intervalId;
+
+        return () => {
+            if (intervalIdRef.current) {
+                clearInterval(intervalIdRef.current);
+            }
+        };
+    }, [fetchData]);
 
     return (
         <div className="monitor-dashboard">
@@ -212,6 +207,18 @@ const MonitorDashboard: React.FC = () => {
                             <p>URL: {endpoint.url}</p>
                             <p>Status: {result ? result.status : 'Unknown'}</p>
                             <p>Response: {result ? result.response : 'Unknown'}</p>
+                            <p>Last Response Duration: {results.filter(r => r.endpoint === endpoint.url).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.duration.toFixed(2) || 'N/A'} ms</p>
+                            <p>Average Response Time: {
+                                (() => {
+                                    const relevantResults = results.filter(r => r.endpoint === endpoint.url)
+                                                                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                                                                .slice(0, 3);
+                                    const avgDuration = relevantResults.length ? 
+                                                        (relevantResults.reduce((acc, curr) => acc + curr.duration, 0) / relevantResults.length).toFixed(2) 
+                                                        : 'N/A';
+                                    return `${avgDuration} ms`;
+                                })()}
+                            </p>
                             <p>Last Checked: {result ? formatTimestamp(result.timestamp) : 'Never'}</p>
                             <button onClick={() => handleTestEndpoint(endpoint.url)}>Test Endpoint</button>
                             <button onClick={() => handleRemoveEndpoint(endpoint.id)}>Remove</button>
@@ -239,15 +246,14 @@ const MonitorDashboard: React.FC = () => {
 
             <div className="card settings-card">
                 <h2>Settings</h2>
-                <label>
-                    Check Interval (seconds):
+                <div>
+                    <label>Check Interval (seconds): </label>
                     <input
                         type="number"
                         value={settings.checkInterval}
-                        placeholder={settings.checkInterval.toString()}
                         onChange={(e) => handleCheckIntervalChange(Number(e.target.value))}
                     />
-                </label>
+                </div>
             </div>
         </div>
     );
