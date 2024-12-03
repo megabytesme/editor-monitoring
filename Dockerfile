@@ -1,32 +1,16 @@
-FROM node:18 AS build-react
+FROM node:latest AS builder
 WORKDIR /app
-
-COPY src/monitor-frontend/package.json src/monitor-frontend/package-lock.json ./
+COPY /src/monitor-frontend/package*.json ./
 RUN npm install
-
-COPY src/monitor-frontend/ ./
+COPY /src/monitor-frontend/. .
 RUN npm run build
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-csharp
-WORKDIR /src
-
-COPY src/monitor-service/*.csproj ./
-RUN dotnet restore
-
-COPY src/monitor-service/ ./
-RUN dotnet publish -c Release -o /app
-
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS final
+FROM node:alpine
 WORKDIR /app
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
 
-COPY --from=build-react /app/build /app/monitor-frontend
-COPY --from=build-csharp /app /app/monitor-service
+RUN npm install next
 
-RUN apt-get update && apt-get install -y sqlite3 npm \
-    && npm install -g http-server
-
-VOLUME ["/app/data"]
-
-EXPOSE 3000 5000
-
-CMD ["sh", "-c", "dotnet /app/monitor-service/monitor-service.dll & http-server /app/monitor-frontend -p 3000"]
+CMD ["npm", "start"]
