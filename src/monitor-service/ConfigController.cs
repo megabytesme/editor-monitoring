@@ -127,13 +127,14 @@ public class ConfigController : ControllerBase
                     settings = new SettingsConfig
                     {
                         Id = reader.GetInt32(0),
-                        CheckInterval = reader.GetInt32(1)
+                        CheckInterval = reader.GetInt32(1),
+                        AvgResponseTimeWindow = reader.GetInt32(2)
                     };
                 }
             }
 
             _logger.LogInformation("Settings fetched successfully.");
-            return Ok(settings ?? new SettingsConfig { Id = 1, CheckInterval = 30 }); // Return default if not found
+            return Ok(settings ?? new SettingsConfig { Id = 1, CheckInterval = 30, AvgResponseTimeWindow = 10 });
         }
         catch (Exception ex)
         {
@@ -154,9 +155,10 @@ public class ConfigController : ControllerBase
         {
             await _dbConnection.OpenAsync();
             var command = _dbConnection.CreateCommand();
-            command.CommandText = "REPLACE INTO Settings (Id, CheckInterval) VALUES (@id, @checkInterval)";
+            command.CommandText = "REPLACE INTO Settings (Id, CheckInterval, AvgResponseTimeWindow) VALUES (@id, @checkInterval, @avgResponseTimeWindow)";
             command.Parameters.AddWithValue("@id", settings.Id);
             command.Parameters.AddWithValue("@checkInterval", settings.CheckInterval);
+            command.Parameters.AddWithValue("@avgResponseTimeWindow", settings.AvgResponseTimeWindow);
             await command.ExecuteNonQueryAsync();
 
             _logger.LogInformation("Settings updated successfully.");
@@ -185,4 +187,5 @@ public class SettingsConfig
 {
     public int Id { get; set; }
     public int CheckInterval { get; set; }
+    public int AvgResponseTimeWindow { get; set; }
 }

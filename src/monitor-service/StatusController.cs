@@ -39,7 +39,8 @@ public class StatusController : ControllerBase
                         Endpoint = reader.GetString(1),
                         Response = reader.GetString(2),
                         Status = reader.GetInt32(3),
-                        Timestamp = reader.GetDateTime(4)
+                        Timestamp = reader.GetDateTime(4),
+                        Duration = reader.GetDouble(5)
                     });
                 }
             }
@@ -68,4 +69,5 @@ public class StatusResult
     public string Response { get; set; }
     public int Status { get; set; }
     public DateTime Timestamp { get; set; }
+    public double Duration { get; set; }
 }

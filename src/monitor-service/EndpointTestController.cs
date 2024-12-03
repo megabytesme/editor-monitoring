@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -27,14 +28,20 @@ public class EndpointTesterController : ControllerBase
     {
         _logger.LogInformation("Received request to test endpoint: {Endpoint}", request.Endpoint);
 
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
+
         var response = await _httpClient.GetAsync(request.Endpoint);
         var content = await response.Content.ReadAsStringAsync();
         var statusCode = (int)response.StatusCode;
         _logger.LogInformation("Received response with status code: {StatusCode}", statusCode);
 
-        await LogResultAsync(request.Endpoint, content, statusCode);
+        stopwatch.Stop();
+        var duration = stopwatch.Elapsed.TotalMilliseconds;
 
-        return Ok(new { message = statusCode == 200 ? "Success" : "Failure" });
+        await LogResultAsync(request.Endpoint, content, statusCode, duration);
+
+        return Ok(new { message = statusCode == 200 ? "Success" : "Failure", duration });
     }
 
     [HttpGet]
@@ -59,7 +66,8 @@ public class EndpointTesterController : ControllerBase
                         Endpoint = reader.GetString(1),
                         Response = reader.GetString(2),
                         Status = reader.GetInt32(3),
-                        Timestamp = reader.GetDateTime(4)
+                        Timestamp = reader.GetDateTime(4),
+                        Duration = reader.GetDouble(5)
                     });
                 }
             }
@@ -77,17 +85,19 @@ public class EndpointTesterController : ControllerBase
         }
     }
 
-    private async Task LogResultAsync(string endpoint, string response, int statusCode)
+    private async Task LogResultAsync(string endpoint, string response, int statusCode, double duration)
     {
-        _logger.LogInformation("Logging result to database. Endpoint: {Endpoint}, Response: {Response}, Status: {StatusCode}", endpoint, response, statusCode);
+        _logger.LogInformation("Logging result to database. Endpoint: {Endpoint}, Response: {Response}, Status: {StatusCode}, Duration: {Duration}", endpoint, response, statusCode, duration);
         try
         {
             await _dbConnection.OpenAsync();
             var command = _dbConnection.CreateCommand();
-            command.CommandText = @"INSERT INTO Results (Endpoint, Response, Status) VALUES (@endpoint, @response, @statusCode)";
+            command.CommandText = @"INSERT INTO Results (Endpoint, Response, Status, Timestamp, Duration) VALUES (@endpoint, @response, @statusCode, @timestamp, @duration)";
             command.Parameters.AddWithValue("@endpoint", endpoint);
             command.Parameters.AddWithValue("@response", response);
             command.Parameters.AddWithValue("@statusCode", statusCode);
+            command.Parameters.AddWithValue("@timestamp", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@duration", duration);
             await command.ExecuteNonQueryAsync();
             _logger.LogInformation("Result logged successfully.");
         }
@@ -115,4 +125,5 @@ public class Result
     public string Response { get; set; }
     public int Status { get; set; }
     public DateTime Timestamp { get; set; }
+    public double Duration { get; set; }
 }
