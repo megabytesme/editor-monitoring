@@ -33,11 +33,19 @@ const MonitorDashboard: React.FC = () => {
 
     const fetchEndpoints = async () => {
         try {
-            const response = await httpRequest<EndpointConfig[]>({
+            const response = await fetch('http://localhost:5000/api/config/endpoints', {
                 method: 'GET',
-                url: 'http://localhost:5000/api/config/endpoints',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
-            setEndpoints(response);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setEndpoints(data);
         } catch (error) {
             console.error('Error fetching endpoints:', error);
         }
@@ -45,11 +53,19 @@ const MonitorDashboard: React.FC = () => {
 
     const fetchStatusResults = async () => {
         try {
-            const response = await httpRequest<StatusResult[]>({
+            const response = await fetch('http://localhost:5000/api/status/results', {
                 method: 'GET',
-                url: 'http://localhost:5000/api/status/results',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
-            setResults(response);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setResults(data);
         } catch (error) {
             console.error('Error fetching status results:', error);
         }
@@ -77,12 +93,20 @@ const MonitorDashboard: React.FC = () => {
 
     const handleAddEndpoint = async () => {
         try {
-            const response = await httpRequest<EndpointConfig>({
+            const response = await fetch('http://localhost:5000/api/config/endpoints', {
                 method: 'POST',
-                url: 'http://localhost:5000/api/config/endpoints',
-                body: newEndpoint,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newEndpoint),
             });
-            setEndpoints([...endpoints, response]);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setEndpoints([...endpoints, data]);
             setNewEndpoint({ id: 0, friendlyName: '', url: '' });
             fetchStatusResults();
         } catch (error) {
@@ -92,24 +116,39 @@ const MonitorDashboard: React.FC = () => {
 
     const handleCheckIntervalChange = async (newInterval: number) => {
         try {
-            const response = await httpRequest<SettingsConfig>({
+            const response = await fetch('http://localhost:5000/api/config/settings', {
                 method: 'PUT',
-                url: 'http://localhost:5000/api/config/settings',
-                body: { id: 1, checkInterval: newInterval },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: 1, checkInterval: newInterval }),
             });
-            setSettings(response);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setSettings(data);
         } catch (error) {
             console.error('Error updating check interval:', error);
         }
-    };
+    };    
 
     const handleTestEndpoint = async (endpoint: string) => {
         try {
-            await httpRequest<void>({
+            const response = await fetch('http://localhost:5000/api/EndpointTester/test-endpoint', {
                 method: 'POST',
-                url: 'http://localhost:5000/api/EndpointTester/test-endpoint',
-                body: { endpoint },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ endpoint }),
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             fetchStatusResults();
         } catch (error) {
             console.error('Error testing endpoint:', error);
