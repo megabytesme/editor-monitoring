@@ -17,12 +17,13 @@ builder.Services.AddCors(options =>
         {
             builder.WithOrigins("http://localhost:3000")
                    .AllowAnyMethod()
-                   .AllowAnyHeader();
+                   .AllowAnyHeader()
+                   .AllowCredentials();
         });
 });
 
 var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "monitoring.db");
-Directory.CreateDirectory(Path.GetDirectoryName(dbPath)); // Ensure the directory exists
+Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
 string connectionString = $"Data Source={dbPath}";
 builder.Services.AddSingleton(new SqliteConnection(connectionString));
 builder.Services.AddHostedService<DatabaseInitialiser>();
