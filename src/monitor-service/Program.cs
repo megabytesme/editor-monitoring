@@ -27,6 +27,7 @@ Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
 string connectionString = $"Data Source={dbPath}";
 builder.Services.AddSingleton(new SqliteConnection(connectionString));
 builder.Services.AddHostedService<DatabaseInitialiser>();
+builder.Services.AddHostedService<EndpointCheckerService>();
 
 var app = builder.Build();
 
