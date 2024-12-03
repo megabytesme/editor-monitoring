@@ -1,25 +1,27 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Node modules
 /node_modules
-/.pnp
-.pnp.js
 /src/monitor-frontend/node_modules
+
+# Build output
 /src/monitor-frontend/build
-
-# testing
-/coverage
-
-# production
 /build
 
-# misc
-.DS_Store
+# Testing
+/coverage
+
+# Production
+/.next
+/.out
+
+# Environment variables
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -30,3 +32,14 @@ yarn-error.log*
 
 # SQLite database files
 /src/monitor-service/*.db
+
+# MacOS system files
+.DS_Store
+
+# Next.js output (build artifacts)
+.next/
+/out/
+
+# IDE specific files
+.vscode/
+/.idea/
