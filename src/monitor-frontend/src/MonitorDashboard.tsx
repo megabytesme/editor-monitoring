@@ -99,19 +99,6 @@ const MonitorDashboard: React.FC = () => {
         }
     };
     
-    const handleCheckIntervalChange = async (newInterval: number) => {
-        try {
-            const data = await httpRequest<SettingsConfig>({
-                method: 'PUT',
-                url: 'http://localhost:5000/api/config/settings',
-                body: { ...settings, checkInterval: newInterval },
-            });
-            setSettings(data);
-        } catch (error) {
-            console.error('Error updating check interval:', error);
-        }
-    };
-    
     const handleTestEndpoint = async (endpoint: string) => {
         try {
             await httpRequest<void>({
@@ -125,18 +112,47 @@ const MonitorDashboard: React.FC = () => {
         }
     };
     
+    const handleCheckIntervalChange = async (newInterval: number) => {
+        try {
+            const response = await fetch('http://localhost:5000/api/config/settings', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ...settings, checkInterval: newInterval }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setSettings(data);
+        } catch (error) {
+            console.error('Error updating check interval:', error);
+        }
+    };
+    
     const handleAvgResponseTimeWindowChange = async (newWindow: number) => {
         try {
-            const data = await httpRequest<SettingsConfig>({
+            const response = await fetch('http://localhost:5000/api/config/settings', {
                 method: 'PUT',
-                url: 'http://localhost:5000/api/config/settings',
-                body: { ...settings, avgResponseTimeWindow: newWindow },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ...settings, avgResponseTimeWindow: newWindow }),
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
             setSettings(data);
         } catch (error) {
             console.error('Error updating avgResponseTimeWindow:', error);
         }
-    };    
+    };  
 
     const fetchData = useCallback(() => {
         fetchEndpoints();
