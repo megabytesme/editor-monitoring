@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './MonitorDashboard.css';
+import { httpRequest } from './httpService';
 
 interface EndpointConfig {
     id: number;
@@ -36,99 +37,60 @@ const MonitorDashboard: React.FC = () => {
 
     const fetchEndpoints = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/endpoints', {
+            const data = await httpRequest<EndpointConfig[]>({
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                url: 'http://localhost:5000/api/config/endpoints',
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data: EndpointConfig[] = await response.json();
             setEndpoints(data);
         } catch (error) {
             console.error('Error fetching endpoints:', error);
         }
     };
-
+    
     const fetchStatusResults = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/status/results', {
+            const data = await httpRequest<StatusResult[]>({
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                url: 'http://localhost:5000/api/status/results',
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data: StatusResult[] = await response.json();
             setResults(data);
         } catch (error) {
             console.error('Error fetching status results:', error);
         }
     };
-
+    
     const fetchSettings = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/settings', {
+            const data = await httpRequest<SettingsConfig>({
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                url: 'http://localhost:5000/api/config/settings',
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data: SettingsConfig = await response.json();
             setSettings(data);
         } catch (error) {
             console.error('Error fetching settings:', error);
         }
     };
-
+    
     const handleRemoveEndpoint = async (id: number) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/config/endpoints/${id}`, {
+            await httpRequest<void>({
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                url: `http://localhost:5000/api/config/endpoints/${id}`,
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
             fetchEndpoints();
             fetchStatusResults();
         } catch (error) {
             console.error('Error removing endpoint:', error);
         }
     };
-
+    
     const handleAddEndpoint = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/endpoints', {
+            const data = await httpRequest<EndpointConfig>({
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(newEndpoint),
+                url: 'http://localhost:5000/api/config/endpoints',
+                body: newEndpoint,
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
             setEndpoints([...endpoints, data]);
             setNewEndpoint({ id: 0, friendlyName: '', url: '' });
             fetchStatusResults();
@@ -136,68 +98,45 @@ const MonitorDashboard: React.FC = () => {
             console.error('Error adding endpoint:', error);
         }
     };
-
+    
     const handleCheckIntervalChange = async (newInterval: number) => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/settings', {
+            const data = await httpRequest<SettingsConfig>({
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ ...settings, checkInterval: newInterval }),
+                url: 'http://localhost:5000/api/config/settings',
+                body: { ...settings, checkInterval: newInterval },
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
             setSettings(data);
         } catch (error) {
             console.error('Error updating check interval:', error);
         }
     };
-
+    
     const handleTestEndpoint = async (endpoint: string) => {
         try {
-            const response = await fetch('http://localhost:5000/api/EndpointTester/test-endpoint', {
+            await httpRequest<void>({
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ endpoint }),
+                url: 'http://localhost:5000/api/EndpointTester/test-endpoint',
+                body: { endpoint },
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
             fetchStatusResults();
         } catch (error) {
             console.error('Error testing endpoint:', error);
         }
     };
-
+    
     const handleAvgResponseTimeWindowChange = async (newWindow: number) => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/settings', {
+            const data = await httpRequest<SettingsConfig>({
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ ...settings, avgResponseTimeWindow: newWindow }),
+                url: 'http://localhost:5000/api/config/settings',
+                body: { ...settings, avgResponseTimeWindow: newWindow },
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
             setSettings(data);
         } catch (error) {
             console.error('Error updating avgResponseTimeWindow:', error);
         }
-    };
+    };    
 
     const fetchData = useCallback(() => {
         fetchEndpoints();
