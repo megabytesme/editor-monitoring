@@ -16,7 +16,7 @@ public class DatabaseInitialiser : IHostedService
         _logger = logger;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)  // Marked as async
     {
         _logger.LogInformation("Initializing database...");
 
@@ -25,7 +25,7 @@ public class DatabaseInitialiser : IHostedService
             LogDatabaseType();
             LogExistingTables();
 
-            _dbConnection.Open();
+            await _dbConnection.OpenAsync();  // Use async open method
             var command = _dbConnection.CreateCommand();
             command.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Results (
@@ -46,7 +46,20 @@ public class DatabaseInitialiser : IHostedService
                     CheckInterval INTEGER NOT NULL,
                     AvgResponseTimeWindow INTEGER NOT NULL  -- Add AvgResponseTimeWindow field
                 );";
-            command.ExecuteNonQuery();
+            await command.ExecuteNonQueryAsync();  // Use async execution
+
+            command.CommandText = "SELECT COUNT(*) FROM Settings";
+            var count = Convert.ToInt32(await command.ExecuteScalarAsync());  // Use async scalar execution
+
+            if (count == 0)
+            {
+                _logger.LogInformation("No settings found. Inserting default settings...");
+                command.CommandText = @"INSERT INTO Settings (Id, CheckInterval, AvgResponseTimeWindow)
+                                         VALUES (1, 30, 10);";
+                await command.ExecuteNonQueryAsync();  // Use async execution
+                _logger.LogInformation("Default settings inserted.");
+            }
+
             _logger.LogInformation("Database initialized successfully.");
 
             LogExistingTables();
@@ -58,10 +71,8 @@ public class DatabaseInitialiser : IHostedService
         }
         finally
         {
-            _dbConnection.Close();
+            await _dbConnection.CloseAsync();
         }
-
-        return Task.CompletedTask;
     }
 
     private void LogDatabaseType()
