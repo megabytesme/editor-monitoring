@@ -33,7 +33,8 @@ public class DatabaseInitialiser : IHostedService
                     Endpoint TEXT NOT NULL,
                     Response TEXT NOT NULL,
                     Status INT NOT NULL,
-                    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    Duration REAL NOT NULL  -- Add Duration field
                 );
                 CREATE TABLE IF NOT EXISTS Endpoints (
                     Id INTEGER PRIMARY KEY,
@@ -42,7 +43,8 @@ public class DatabaseInitialiser : IHostedService
                 );
                 CREATE TABLE IF NOT EXISTS Settings (
                     Id INTEGER PRIMARY KEY,
-                    CheckInterval INTEGER NOT NULL
+                    CheckInterval INTEGER NOT NULL,
+                    AvgResponseTimeWindow INTEGER NOT NULL  -- Add AvgResponseTimeWindow field
                 );";
             command.ExecuteNonQuery();
             _logger.LogInformation("Database initialized successfully.");
