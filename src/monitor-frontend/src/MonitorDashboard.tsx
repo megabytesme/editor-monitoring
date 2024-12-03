@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { httpRequest } from './httpService';
+import React, { useState, useEffect, useRef } from 'react';
 import './MonitorDashboard.css';
 
 interface EndpointConfig {
@@ -30,6 +29,7 @@ const MonitorDashboard: React.FC = () => {
     const [results, setResults] = useState<StatusResult[]>([]);
     const [newEndpoint, setNewEndpoint] = useState<EndpointConfig>({ id: 0, friendlyName: '', url: '' });
     const [settings, setSettings] = useState<SettingsConfig>({ checkInterval: 30 });
+    const intervalIdRef = useRef<number | null>(null);
 
     const fetchEndpoints = async () => {
         try {
@@ -64,10 +64,41 @@ const MonitorDashboard: React.FC = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            setResults(data);
+            const data: StatusResult[] = await response.json();
+            
+            const latestResultsMap = new Map<string, StatusResult>();
+
+            data.forEach(result => {
+                const current = latestResultsMap.get(result.endpoint);
+                if (!current || new Date(result.timestamp) > new Date(current.timestamp)) {
+                    latestResultsMap.set(result.endpoint, result);
+                }
+            });
+
+            const latestResults = Array.from(latestResultsMap.values());
+            setResults(latestResults);
         } catch (error) {
             console.error('Error fetching status results:', error);
+        }
+    };
+
+    const fetchSettings = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/config/settings', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data: SettingsConfig = await response.json();
+            setSettings(data);
+        } catch (error) {
+            console.error('Error fetching settings:', error);
         }
     };
 
@@ -156,9 +187,17 @@ const MonitorDashboard: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchEndpoints();
-        fetchStatusResults();
-    }, []);
+        const fetchData = () => {
+            fetchEndpoints();
+            fetchStatusResults();
+        };
+
+        fetchSettings().then(fetchData);
+
+        const interval = setInterval(fetchData, settings.checkInterval * 1000);
+
+        return () => clearInterval(interval);
+    }, [settings.checkInterval]);
 
     return (
         <div className="monitor-dashboard">
@@ -205,6 +244,7 @@ const MonitorDashboard: React.FC = () => {
                     <input
                         type="number"
                         value={settings.checkInterval}
+                        placeholder={settings.checkInterval.toString()}
                         onChange={(e) => handleCheckIntervalChange(Number(e.target.value))}
                     />
                 </label>
