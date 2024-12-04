@@ -29,38 +29,33 @@ integration:
   stage: integration
   script:
     - |
-      echo "Adding new endpoint..."
-      ADD_RESPONSE=$(curl -s -X POST "http://144.21.57.120:8082/api/config/endpoints" \
-        -H "Content-Type: application/json" \
-        -d '{"FriendlyName": "TestEndpoint", "Url": "http://www.google.com"}')
-      echo "$ADD_RESPONSE"
-      ENDPOINT_ID=$(echo "$ADD_RESPONSE" | jq -r '.id')
-      
-      if [[ -z "$ENDPOINT_ID" || "$ENDPOINT_ID" == "null" ]]; then
-        echo "Failed to add endpoint. Exiting."
-        exit 1
-      fi
-
-      echo "Fetching all endpoints..."
-      curl -s "http://144.21.57.120:8082/api/config/endpoints"
-
-      echo "Testing the newly added endpoint..."
-      TEST_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://144.21.57.120:8082/api/endpoint-tester/test-endpoint" \
-        -H "Content-Type: application/json" \
-        -d "{\"Endpoint\": \"http://www.google.com\"}")
-
-      if [[ "$TEST_RESPONSE" -ne 200 ]]; then
-        echo "Endpoint test failed with status code $TEST_RESPONSE. Exiting."
-        exit 1
-      fi
-      echo "Endpoint test successful!"
-
-      echo "Deleting the added endpoint..."
-      DELETE_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://144.21.57.120:8082/api/config/endpoints/$ENDPOINT_ID")
-      
-      if [[ "$DELETE_RESPONSE" -eq 204 ]]; then
-        echo "Successfully deleted endpoint with ID: $ENDPOINT_ID"
-      else
-        echo "Failed to delete endpoint. HTTP Status: $DELETE_RESPONSE"
-        exit 1
-      fi
+      echo "Adding new endpoint...";
+      ADD_RESPONSE=$(curl -s -w "%{http_code}" -o response.json -X POST "http://144.21.57.120:8082/api/config/endpoints" -H "Content-Type: application/json" -d "{\"FriendlyName\": \"TestEndpoint\", \"Url\": \"http://www.google.com\"}");
+      STATUS_CODE=$(echo "$ADD_RESPONSE" | tail -n 1);
+      echo "HTTP Status Code: $STATUS_CODE";
+      if [[ "$STATUS_CODE" -ne 200 ]]; then 
+          echo "Failed to add endpoint. Response: $(cat response.json)"; 
+          exit 1; 
+      fi;
+      ENDPOINT_ID=$(cat response.json | jq -r ".id");
+      if [[ -z "$ENDPOINT_ID" || "$ENDPOINT_ID" == "null" ]]; then 
+          echo "Failed to parse endpoint ID. Exiting."; 
+          exit 1; 
+      fi;
+      echo "Fetching all endpoints...";
+      curl -s "http://144.21.57.120:8082/api/config/endpoints";
+      echo "Testing the newly added endpoint...";
+      TEST_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://144.21.57.120:8082/api/EndpointTester/test-endpoint" -H "Content-Type: application/json" -d "{\"Endpoint\": \"http://www.google.com\"}");
+      if [[ "$TEST_RESPONSE" -ne 200 ]]; then 
+          echo "Endpoint test failed with status code $TEST_RESPONSE. Exiting."; 
+          exit 1; 
+      fi;
+      echo "Endpoint test successful!";
+      echo "Deleting the added endpoint...";
+      DELETE_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://144.21.57.120:8082/api/config/endpoints/$ENDPOINT_ID");
+      if [[ "$DELETE_RESPONSE" -eq 204 ]]; then 
+          echo "Successfully deleted endpoint with ID: $ENDPOINT_ID"; 
+      else 
+          echo "Failed to delete endpoint. HTTP Status: $DELETE_RESPONSE"; 
+          exit 1; 
+      fi;
