@@ -29,4 +29,4 @@ VOLUME ["/app/data"]
 
 EXPOSE 3000 5000
 
-CMD ["sh", "-c", "dotnet /app/monitor-service/monitor-service.dll & http-server /app/monitor-frontend -p 3000"]
+CMD ["sh", "-c", "dotnet /app/monitor-service/MonitorService.dll & http-server /app/monitor-frontend -p 3000"]
