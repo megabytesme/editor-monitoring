@@ -51,7 +51,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             const data = await httpRequest<StatusResult[]>({
                 method: 'GET',
-                url: 'http://144.21.57.120:8082/api/status/results',
+                url: 'http://144.21.57.120:8082/api/EndpointTester/results',
             });
             setResults(data);
         } catch (error) {
