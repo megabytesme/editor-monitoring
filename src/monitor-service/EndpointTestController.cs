@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -22,19 +22,15 @@ public class EndpointTesterController : ControllerBase
         _logger = logger;
     }
 
-    [HttpPost]
-    [Route("test-endpoint")]
+    [HttpPost("test-endpoint")]
     public async Task<IActionResult> TestEndpoint([FromBody] TestRequest request)
     {
-        _logger.LogInformation("Received request to test endpoint: {Endpoint}", request.Endpoint);
+        _logger.LogInformation("Testing endpoint: {Endpoint}", request.Endpoint);
 
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
-
+        var stopwatch = Stopwatch.StartNew();
         var response = await _httpClient.GetAsync(request.Endpoint);
         var content = await response.Content.ReadAsStringAsync();
         var statusCode = (int)response.StatusCode;
-        _logger.LogInformation("Received response with status code: {StatusCode}", statusCode);
 
         stopwatch.Stop();
         var duration = stopwatch.Elapsed.TotalMilliseconds;
@@ -44,11 +40,11 @@ public class EndpointTesterController : ControllerBase
         return Ok(new { message = statusCode == 200 ? "Success" : "Failure", duration });
     }
 
-    [HttpGet]
-    [Route("results")]
+    [HttpGet("results")]
     public async Task<IActionResult> GetResults()
     {
         _logger.LogInformation("Fetching results from database...");
+
         try
         {
             await _dbConnection.OpenAsync();
@@ -71,13 +67,12 @@ public class EndpointTesterController : ControllerBase
                     });
                 }
             }
-            _logger.LogInformation("Results fetched successfully.");
             return Ok(results);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching results from database.");
-            throw;
+            return StatusCode(500, "Internal server error");
         }
         finally
         {
@@ -87,24 +82,27 @@ public class EndpointTesterController : ControllerBase
 
     private async Task LogResultAsync(string endpoint, string response, int statusCode, double duration)
     {
-        _logger.LogInformation("Logging result to database. Endpoint: {Endpoint}, Response: {Response}, Status: {StatusCode}, Duration: {Duration}", endpoint, response, statusCode, duration);
+        _logger.LogInformation("Logging result for endpoint: {Endpoint}, Status: {StatusCode}, Duration: {Duration}", endpoint, statusCode, duration);
+
         try
         {
             await _dbConnection.OpenAsync();
             var command = _dbConnection.CreateCommand();
-            command.CommandText = @"INSERT INTO Results (Endpoint, Response, Status, Timestamp, Duration) VALUES (@endpoint, @response, @statusCode, @timestamp, @duration)";
+            command.CommandText = @"
+                INSERT INTO Results (Endpoint, Response, Status, Timestamp, Duration) 
+                VALUES (@endpoint, @response, @statusCode, @timestamp, @duration)";
+
             command.Parameters.AddWithValue("@endpoint", endpoint);
             command.Parameters.AddWithValue("@response", response);
             command.Parameters.AddWithValue("@statusCode", statusCode);
             command.Parameters.AddWithValue("@timestamp", DateTime.UtcNow);
             command.Parameters.AddWithValue("@duration", duration);
+
             await command.ExecuteNonQueryAsync();
-            _logger.LogInformation("Result logged successfully.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error logging result to database.");
-            throw;
         }
         finally
         {

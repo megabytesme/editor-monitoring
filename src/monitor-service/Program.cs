@@ -12,20 +12,19 @@ builder.Services.AddLogging();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAllOrigins",
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader()
-                   .AllowCredentials();
-        });
+    options.AddPolicy("AllowAllOrigins", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
 var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "monitoring.db");
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
 string connectionString = $"Data Source={dbPath}";
 builder.Services.AddSingleton(new SqliteConnection(connectionString));
+
 builder.Services.AddHostedService<DatabaseInitialiser>();
 builder.Services.AddHostedService<EndpointCheckerService>();
 
@@ -36,13 +35,13 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.UseRouting();
-
 app.UseCors("AllowAllOrigins");
+
+app.UseRouting();
 
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapControllers().RequireCors("AllowLocalhost3000");
+    endpoints.MapControllers();
 });
 
 app.Run();

@@ -18,7 +18,6 @@ export const httpRequest = async <T>(config: RequestConfig): Promise<T> => {
                 ...headers,
             },
             body: body ? JSON.stringify(body) : null,
-            credentials: 'include',
         });
 
         console.log("Received response:", response);
