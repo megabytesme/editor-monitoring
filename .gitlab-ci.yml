@@ -3,10 +3,11 @@ image: mcr.microsoft.com/dotnet/sdk:7.0
 stages:
   - build
   - test
+  - integration
 
 before_script:
   - apt-get update -qy
-  - apt-get install -y nuget
+  - apt-get install -y curl
   - cd src/monitor-service
   - dotnet restore
   - cd ../../tests/MonitorService.Tests
@@ -23,3 +24,34 @@ test:
   script:
     - cd ../../tests/MonitorService.Tests
     - dotnet test --configuration Release
+
+integration:
+  stage: integration
+  script:
+    - |
+      BASE_URL="http://144.21.57.120:8082/api"
+      
+      response=$(curl -s -X POST "$BASE_URL/config/endpoints" \
+        -H "Content-Type: application/json" \
+        -d '{"FriendlyName": "TestEndpoint", "Url": "http://example.com"}')
+      
+      endpoint_id=$(echo $response | jq -r '.id')
+
+      echo "Added endpoint with ID: $endpoint_id"
+
+      curl -s "$BASE_URL/config/endpoints"
+      
+      test_response=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/endpoint-tester/test-endpoint" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d "{\"Endpoint\": \"http://example.com\"}")
+      
+      if [ "$test_response" -eq 200 ]; then
+        echo "Endpoint test successful!"
+      else
+        echo "Endpoint test failed with status code $test_response"
+        exit 1
+      fi
+
+      curl -s -X DELETE "$BASE_URL/config/endpoints/$endpoint_id"
+      echo "Deleted endpoint with ID: $endpoint_id"
