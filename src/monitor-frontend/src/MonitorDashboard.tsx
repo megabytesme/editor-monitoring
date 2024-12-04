@@ -39,7 +39,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             const data = await httpRequest<EndpointConfig[]>({
                 method: 'GET',
-                url: 'http://localhost:5000/api/config/endpoints',
+                url: 'http://144.21.57.120:8082/api/config/endpoints',
             });
             setEndpoints(data);
         } catch (error) {
@@ -51,7 +51,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             const data = await httpRequest<StatusResult[]>({
                 method: 'GET',
-                url: 'http://localhost:5000/api/status/results',
+                url: 'http://144.21.57.120:8082/api/status/results',
             });
             setResults(data);
         } catch (error) {
@@ -63,7 +63,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             const data = await httpRequest<SettingsConfig>({
                 method: 'GET',
-                url: 'http://localhost:5000/api/config/settings',
+                url: 'http://144.21.57.120:8082/api/config/settings',
             });
             setSettings(data);
         } catch (error) {
@@ -75,7 +75,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             await httpRequest<void>({
                 method: 'DELETE',
-                url: `http://localhost:5000/api/config/endpoints/${id}`,
+                url: `http://144.21.57.120:8082/api/config/endpoints/${id}`,
             });
             fetchEndpoints();
             fetchStatusResults();
@@ -88,7 +88,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             const data = await httpRequest<EndpointConfig>({
                 method: 'POST',
-                url: 'http://localhost:5000/api/config/endpoints',
+                url: 'http://144.21.57.120:8082/api/config/endpoints',
                 body: newEndpoint,
             });
             setEndpoints([...endpoints, data]);
@@ -103,7 +103,7 @@ const MonitorDashboard: React.FC = () => {
         try {
             await httpRequest<void>({
                 method: 'POST',
-                url: 'http://localhost:5000/api/EndpointTester/test-endpoint',
+                url: 'http://144.21.57.120:8082/api/EndpointTester/test-endpoint',
                 body: { endpoint },
             });
             fetchStatusResults();
@@ -114,7 +114,7 @@ const MonitorDashboard: React.FC = () => {
     
     const handleCheckIntervalChange = async (newInterval: number) => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/settings', {
+            const response = await fetch('http://144.21.57.120:8082/api/config/settings', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ const MonitorDashboard: React.FC = () => {
     
     const handleAvgResponseTimeWindowChange = async (newWindow: number) => {
         try {
-            const response = await fetch('http://localhost:5000/api/config/settings', {
+            const response = await fetch('http://144.21.57.120:8082/api/config/settings', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
