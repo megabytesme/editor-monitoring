@@ -27,6 +27,8 @@ yarn-error.log*
 # .NET output
 /src/monitor-service/bin/
 /src/monitor-service/obj/
+/tests/MonitorService.Tests/bin/
+/tests/MonitorService.Tests/obj/
 
 # SQLite database files
 /src/monitor-service/*.db
