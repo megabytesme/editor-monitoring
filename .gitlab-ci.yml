@@ -7,7 +7,7 @@ stages:
 
 before_script:
   - apt-get update -qy
-  - apt-get install -y curl
+  - apt-get install -y curl jq
   - cd src/monitor-service
   - dotnet restore
   - cd ../../tests/MonitorService.Tests
@@ -29,44 +29,38 @@ integration:
   stage: integration
   script:
     - |
-      BASE_URL="http://144.21.57.120:8082/api"
-
-      which curl || { echo "curl not installed!"; exit 1; }
-
       echo "Adding new endpoint..."
-      response=$(curl -s -X POST "$BASE_URL/config/endpoints" \
+      ADD_RESPONSE=$(curl -s -X POST "http://144.21.57.120:8082/api/config/endpoints" \
         -H "Content-Type: application/json" \
-        -d '{"FriendlyName": "TestEndpoint", "Url": "http://example.com"}')
-
-      if [[ "$response" == *"id"* ]]; then
-        endpoint_id=$(echo $response | jq -r '.id')
-        echo "Added endpoint with ID: $endpoint_id"
-      else
-        echo "Failed to add endpoint. Response: $response"
+        -d '{"FriendlyName": "TestEndpoint", "Url": "http://www.google.com"}')
+      echo "$ADD_RESPONSE"
+      ENDPOINT_ID=$(echo "$ADD_RESPONSE" | jq -r '.id')
+      
+      if [[ -z "$ENDPOINT_ID" || "$ENDPOINT_ID" == "null" ]]; then
+        echo "Failed to add endpoint. Exiting."
         exit 1
       fi
 
       echo "Fetching all endpoints..."
-      curl -s "$BASE_URL/config/endpoints"
+      curl -s "http://144.21.57.120:8082/api/config/endpoints"
 
       echo "Testing the newly added endpoint..."
-      test_response=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/endpoint-tester/test-endpoint" \
-        -X POST \
+      TEST_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://144.21.57.120:8082/api/endpoint-tester/test-endpoint" \
         -H "Content-Type: application/json" \
-        -d "{\"Endpoint\": \"http://example.com\"}")
-      if [ "$test_response" -eq 200 ]; then
-        echo "Endpoint test successful!"
-      else
-        echo "Endpoint test failed with status code $test_response"
+        -d "{\"Endpoint\": \"http://www.google.com\"}")
+
+      if [[ "$TEST_RESPONSE" -ne 200 ]]; then
+        echo "Endpoint test failed with status code $TEST_RESPONSE. Exiting."
         exit 1
       fi
+      echo "Endpoint test successful!"
 
       echo "Deleting the added endpoint..."
-      delete_response=$(curl -s -X DELETE "$BASE_URL/config/endpoints/$endpoint_id")
-
-      if [[ "$delete_response" == "null" ]]; then
-        echo "Successfully deleted endpoint with ID: $endpoint_id"
+      DELETE_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://144.21.57.120:8082/api/config/endpoints/$ENDPOINT_ID")
+      
+      if [[ "$DELETE_RESPONSE" -eq 204 ]]; then
+        echo "Successfully deleted endpoint with ID: $ENDPOINT_ID"
       else
-        echo "Failed to delete endpoint. Response: $delete_response"
+        echo "Failed to delete endpoint. HTTP Status: $DELETE_RESPONSE"
         exit 1
       fi
