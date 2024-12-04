@@ -82,11 +82,20 @@ public class ConfigController : ControllerBase
                     {
                         Id = reader.GetInt32(0),
                         CheckInterval = reader.GetInt32(1),
-                        AvgResponseTimeWindow = reader.GetInt32(2)
+                        AvgResponseTimeWindow = reader.GetInt32(2),
+                        EmailAddress = reader.GetString(3),
+                        MaxThresholdDuration = reader.GetInt32(4)
                     };
                 }
             }
-            return Ok(settings ?? new SettingsConfig { Id = 1, CheckInterval = 30, AvgResponseTimeWindow = 10 });
+            return Ok(settings ?? new SettingsConfig
+            {
+                Id = 1,
+                CheckInterval = 30,
+                AvgResponseTimeWindow = 10,
+                EmailAddress = "default@example.com",
+                MaxThresholdDuration = 1000
+            });
         });
     }
 
@@ -95,10 +104,14 @@ public class ConfigController : ControllerBase
     {
         return await ExecuteDatabaseCommand(async command =>
         {
-            command.CommandText = "REPLACE INTO Settings (Id, CheckInterval, AvgResponseTimeWindow) VALUES (@id, @checkInterval, @avgResponseTimeWindow)";
+            command.CommandText = @"
+            REPLACE INTO Settings (Id, CheckInterval, AvgResponseTimeWindow, EmailAddress, MaxThresholdDuration)
+            VALUES (@id, @checkInterval, @avgResponseTimeWindow, @EmailAddress, @maxThresholdDuration)";
             command.Parameters.AddWithValue("@id", settings.Id);
             command.Parameters.AddWithValue("@checkInterval", settings.CheckInterval);
             command.Parameters.AddWithValue("@avgResponseTimeWindow", settings.AvgResponseTimeWindow);
+            command.Parameters.AddWithValue("@EmailAddress", settings.EmailAddress);
+            command.Parameters.AddWithValue("@maxThresholdDuration", settings.MaxThresholdDuration);
             await command.ExecuteNonQueryAsync();
             return Ok(settings);
         });
@@ -136,4 +149,6 @@ public class SettingsConfig
     public int Id { get; set; }
     public int CheckInterval { get; set; }
     public int AvgResponseTimeWindow { get; set; }
+    public string EmailAddress { get; set; }
+    public int MaxThresholdDuration { get; set; }
 }

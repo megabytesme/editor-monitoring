@@ -20,8 +20,11 @@ interface StatusResult {
 
 interface SettingsConfig {
     checkInterval: number;
-    avgResponseTimeWindow?: number;
+    avgResponseTimeWindow: number;
+    emailAddress: string;
+    maxThresholdDuration: number;
 }
+
 
 const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -32,8 +35,13 @@ const MonitorDashboard: React.FC = () => {
     const [endpoints, setEndpoints] = useState<EndpointConfig[]>([]);
     const [results, setResults] = useState<StatusResult[]>([]);
     const [newEndpoint, setNewEndpoint] = useState<EndpointConfig>({ id: 0, friendlyName: '', url: '' });
-    const [settings, setSettings] = useState<SettingsConfig>({ checkInterval: 30, avgResponseTimeWindow: 1 });
-    const intervalIdRef = useRef<number | null>(null);
+    const [settings, setSettings] = useState<SettingsConfig>({
+        checkInterval: 30,
+        avgResponseTimeWindow: 1,
+        emailAddress: '',
+        maxThresholdDuration: 1000,
+    });
+        const intervalIdRef = useRef<number | null>(null);
 
     const fetchEndpoints = async () => {
         try {
@@ -70,6 +78,24 @@ const MonitorDashboard: React.FC = () => {
             console.error('Error fetching settings:', error);
         }
     };
+    
+    const handleSettingChange = async (key: string, value: any) => {
+        try {
+            const updatedSettings = { ...settings, [key]: value };
+            const response = await fetch('http://144.21.57.120:8082/api/config/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedSettings),
+            });
+    
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+            const data = await response.json();
+            setSettings(data);
+        } catch (error) {
+            console.error(`Error updating ${key}:`, error);
+        }
+    };    
     
     const handleRemoveEndpoint = async (id: number) => {
         try {
@@ -238,6 +264,22 @@ const MonitorDashboard: React.FC = () => {
                         type="number"
                         value={settings.avgResponseTimeWindow || 1}
                         onChange={(e) => handleAvgResponseTimeWindowChange(Number(e.target.value))}
+                    />
+                </div>
+                <div>
+                    <label>Alert Email Address: </label>
+                    <input
+                        type="email"
+                        value={settings.emailAddress}
+                        onChange={(e) => handleSettingChange('emailAddress', e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label>Max Threshold Duration (ms): </label>
+                    <input
+                        type="number"
+                        value={settings.maxThresholdDuration}
+                        onChange={(e) => handleSettingChange('maxThresholdDuration', Number(e.target.value))}
                     />
                 </div>
             </div>
