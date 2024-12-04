@@ -97,7 +97,7 @@ public class EndpointCheckerService : BackgroundService
     {
         _logger.LogInformation("Testing endpoint: {Endpoint}", endpoint);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "http://localhost:5000/api/EndpointTester/test-endpoint")
+        var request = new HttpRequestMessage(HttpMethod.Post, "http://localhost:80/api/EndpointTester/test-endpoint")
         {
             Content = new StringContent($"{{ \"endpoint\": \"{endpoint}\" }}", System.Text.Encoding.UTF8, "application/json")
         };
