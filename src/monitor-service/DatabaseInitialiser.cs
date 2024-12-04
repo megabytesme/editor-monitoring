@@ -16,46 +16,55 @@ public class DatabaseInitialiser : IHostedService
         _logger = logger;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)  // Marked as async
     {
         _logger.LogInformation("Initializing database...");
 
         try
         {
             LogDatabaseType();
-            await _dbConnection.OpenAsync(cancellationToken);
+            LogExistingTables();
 
-            await CreateTableAsync(
-                @"CREATE TABLE IF NOT EXISTS Settings (
-                Id INTEGER PRIMARY KEY,
-                CheckInterval INTEGER NOT NULL,
-                AvgResponseTimeWindow INTEGER NOT NULL,
-                EmailAddress TEXT NOT NULL,
-                MaxThresholdDuration INTEGER NOT NULL
-            );", cancellationToken);
+            await _dbConnection.OpenAsync();  // Use async open method
+            var command = _dbConnection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS Results (
+                    Id INTEGER PRIMARY KEY,
+                    Endpoint TEXT NOT NULL,
+                    Response TEXT NOT NULL,
+                    Status INT NOT NULL,
+                    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    Duration REAL NOT NULL  -- Add Duration field
+                );
+                CREATE TABLE IF NOT EXISTS Endpoints (
+                    Id INTEGER PRIMARY KEY,
+                    FriendlyName TEXT NOT NULL,
+                    Url TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS Settings (
+                    Id INTEGER PRIMARY KEY,
+                    CheckInterval INTEGER NOT NULL,
+                    AvgResponseTimeWindow INTEGER NOT NULL,
+                    EmailAddress TEXT NOT NULL,
+                    MaxThresholdDuration INTEGER NOT NULL
+                );";
+            await command.ExecuteNonQueryAsync();  // Use async execution
 
-            await CreateTableAsync(
-                @"CREATE TABLE IF NOT EXISTS Endpoints (
-                Id INTEGER PRIMARY KEY,
-                FriendlyName TEXT NOT NULL,
-                Url TEXT NOT NULL,
-                IsActive INTEGER NOT NULL DEFAULT 1
-            );", cancellationToken);
+            command.CommandText = "SELECT COUNT(*) FROM Settings";
+            var count = Convert.ToInt32(await command.ExecuteScalarAsync());  // Use async scalar execution
 
-            await CreateTableAsync(
-                @"CREATE TABLE IF NOT EXISTS Results (
-                Id INTEGER PRIMARY KEY,
-                EndpointId INTEGER NOT NULL,
-                Status TEXT NOT NULL,
-                ResponseTime INTEGER NOT NULL,
-                Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (EndpointId) REFERENCES Endpoints(Id)
-            );", cancellationToken);
+            if (count == 0)
+            {
+                _logger.LogInformation("No settings found. Inserting default settings...");
+                command.CommandText = @"INSERT INTO Settings (Id, CheckInterval, AvgResponseTimeWindow, EmailAddress, MaxThresholdDuration)
+                                         VALUES (1, 30, 10, 'example@email.com', 300);";
+                await command.ExecuteNonQueryAsync();  // Use async execution
+                _logger.LogInformation("Default settings inserted.");
+            }
 
-            await InsertDefaultSettingsAsync(cancellationToken);
+            _logger.LogInformation("Database initialized successfully.");
 
             LogExistingTables();
-            _logger.LogInformation("Database initialized successfully.");
         }
         catch (Exception ex)
         {
@@ -67,33 +76,6 @@ public class DatabaseInitialiser : IHostedService
             await _dbConnection.CloseAsync();
         }
     }
-
-    private async Task CreateTableAsync(string createTableSql, CancellationToken cancellationToken)
-    {
-        var command = _dbConnection.CreateCommand();
-        command.CommandText = createTableSql;
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private async Task InsertDefaultSettingsAsync(CancellationToken cancellationToken)
-    {
-        var checkSettingsCommand = _dbConnection.CreateCommand();
-        checkSettingsCommand.CommandText = "SELECT COUNT(*) FROM Settings";
-        var count = Convert.ToInt32(await checkSettingsCommand.ExecuteScalarAsync(cancellationToken));
-
-        if (count == 0)
-        {
-            _logger.LogInformation("No settings found. Inserting default settings...");
-            var insertDefaultsCommand = _dbConnection.CreateCommand();
-            insertDefaultsCommand.CommandText = @"
-            INSERT INTO Settings (Id, CheckInterval, AvgResponseTimeWindow, EmailAddress, MaxThresholdDuration)
-            VALUES (1, 30, 10, 'default@example.com', 1000);
-        ";
-            await insertDefaultsCommand.ExecuteNonQueryAsync(cancellationToken);
-            _logger.LogInformation("Default settings inserted.");
-        }
-    }
-
     private void LogDatabaseType()
     {
         _logger.LogInformation("Database type: {Type}", _dbConnection.DataSource);
